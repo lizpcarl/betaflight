@@ -165,7 +165,6 @@
 // Accel IPREG_SYS2_REG_123 - 0x7B
 // #define ICM42666_SRC_CTRL_AAF_ENABLE_BIT        (1 << 0) // Anti-Alias Filter - AAF
 #define ICM42666_SRC_CTRL_INTERP_ENABLE_BIT     (1 << 1) // Interpolator
-//modified for 45670 and 45605, ACCEL_SRC_CTRL 2: Interpolator on and FIR filter on; See section "22.7 IPREG_SYS2_REG_123" in ICM-45686 or "21.7 IPREG_SYS2_REG_123 " in ICM-45670 datasheet;
 #define ICM42666_SRC_CTRL_AAF_ENABLE_BIT        (1 << 1) // Anti-Alias Filter - AAF
 
 // IPREG_SYS2_REG_123 - 0x7B
@@ -232,7 +231,7 @@ static uint8_t getGyroLpfConfig(const gyroHardwareLpf_e hardwareLpf)
         // ODR/32 = 200 Hz for cleaner filtering
         return ICM42666_GYRO_UI_LPFBW_ODR_DIV_32;
     case GYRO_HARDWARE_LPF_OPTION_1:
-        // ODR/16 = 400 Hz, comparable to ~258 Hz AAF on ICM426xx
+        // ODR/16 = 400 Hz, comparable to ~258 Hz AAF on ICM42666
         return ICM42666_GYRO_UI_LPFBW_ODR_DIV_16;
     case GYRO_HARDWARE_LPF_OPTION_2:
         // ODR/8 = 800 Hz for lowest latency
@@ -343,9 +342,6 @@ void icm42666GyroInit(gyroDev_t *gyro)
 
     mpuGyroInit(gyro);
 
-    // ICM-45686 does not use bank switching (register 0x75 is reserved)
-    // Enable both accelerometer and gyroscope sensors
-
     icm42666_enableSensors(dev, true);
     delay(ICM42666_SENSOR_ENABLE_DELAY_MS); // Allow sensors to power on and stabilize
 
@@ -383,7 +379,6 @@ void icm42666GyroInit(gyroDev_t *gyro)
     spiWriteReg(dev, ICM42666_INT1_CONFIG0, ICM42666_INT1_STATUS_EN_DRDY);
 
     // Set up register addresses for combined DMA reads
-    // ICM456xx data is contiguous: accel at 0x00, gyro at 0x06
     gyro->accDataReg = ICM42666_ACCEL_DATA_X1_UI;  // 0x00
     gyro->gyroDataReg = ICM42666_GYRO_DATA_X1_UI;  // 0x06
     gyro->gyroDmaMaxDuration = 0;  // Data ready interrupt ensures timely reads
@@ -394,9 +389,6 @@ uint8_t icm42666SpiDetect(const extDevice_t *dev)
     uint8_t icmDetected = MPU_NONE;
     uint8_t attemptsRemaining = 2;
     uint32_t waited_us = 0;
-
-    // ICM-45686 does not use bank switching (register 0x75 is reserved)
-    // Perform soft reset directly
 
     // Soft reset
     spiWriteReg(dev, ICM42666_REG_MISC2, ICM42666_SOFT_RESET);
